@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;600&display=swap');
+
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+ font-family: 'Inter', sans-serif;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #020b10;
+  color: #e0e0e0;
+  display: flex;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* layout Principal */
+.painel {
+  display: flex;
+  width: 100%;
+}
+
+/* Menu Lateral */
+.menu-lateral {
+  width: 270px;
+  background: linear-gradient(180deg, #0d151d, #0b0c10);
+  border-right: 1px solid #171f25;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  
+}
+
+.area-logo img {
+  background-color: transparent;
+}
+
+/* Login */
+
+.card-login {
+  background: #11141b;
+  padding: 20px;
+  border-radius: 12px;
+  margin-top: 30px;
+  box-shadow: 0 0 10px #002936;
+
+}
+
+.card-login h3 {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.card-login input {
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #1b1e27;
+  color: #cbbd77;
+  border: 1px solid #01394b;
+  box-shadow: inset 0 0 5px #01394b;
+  outline: none;
+}
+
+.card-login button {
+  width: 100%;
+  background: #0a1620;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-weight: bold;
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.card-login button:hover {
+  background-color: #002936;
+}
+
+.mensagem-pequena {
+  text-align: center;
+  color: #ff4444;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+
+/* Menu Pós Login */
+.menu-pos-login {
+  margin-top: 30px;
+}
+
+.usuario-info {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.usuario-nome {
+  font-weight: bold;
+}
+
+.usuario-cargo {
+  font-size: 14px;
+  color: #a0a0a0;
+}
+
+.navegacao {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nav-btn {
+  background-color: #0a1620;
+  border: 1px solid #222;
+  font-weight: bold;
+  border-radius: 8px;
+  color: #8a8a8a;
+  padding: 10px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.nav-btn:hover,
+.nav-btn.ativo {
+  background: #cbbd77;
+  box-shadow: 0 0 10px cbbd77;
+  color: #ffffff;
+}
+
+.nav-btn.sair {
+  margin-top: 15px;
+  background: #ff4444;
+  color: #fff;
+}
