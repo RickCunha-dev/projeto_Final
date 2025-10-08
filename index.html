@@ -1,76 +1,218 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Segurança - Wayne Industriest</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Segurança - Wayne Industries</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="painel">
+<div class="painel">
 
-        <aside class="menu-lateral">
-            <div class="area-logo">
-                <img width="220px" src="/assets/emblema.png">
-            </div>
-
-            <div id="id-login" class="card-login">
-                <h3>LOGIN</h3>
-
-                <input type="text" id="campo-usuario" placeholder="USUÁRIO">
-                <input type="password" class="campo-senha" placeholder="SENHA">
-                <button id="botao-entrar">Entrar</button>
-                <div id="mensagem-login" class="mensagem-pequena"></div>
-            </div>
-
-            <div class="menu-pos-login oculto" id="menu-pos-login">
-                <div class="usuario-info">
-                    <div class="usario-nome" id="usario-nome">Usuário</div>
-                    <div id="usuario-cargo" class="usuario-cargo"></div>
-                </div>
-            </div>
-
-            <nav class="navegacao">
-                <button id="dasboard" class="nav-btn">Dasboard</button>
-                <button id="recursos" class="nav-btn">Recursos</button>
-                <button id="incidentes" class="nav-btn">Incidentes</button>
-                <button id="relatorios" class="nav-btn">Relatórios</button>
-                <button id="botao-sair" class="nav-btn sair">Sair</button>
-            </nav>
-
-            <footer class="rodape">
-                <small>Wayne Industries - Sistema de Controle</small>
-            </footer>
-          </aside>
+  <!-- MENU LATERAL -->
+  <aside class="menu-lateral">
+    <div class="area-logo">
+      <img width="220px" src="assets/emblema.png" alt="Emblema Wayne Industries">
     </div>
 
-    <main class="conteudo-principal">
+    <!-- LOGIN -->
+    <div id="id-login" class="card-login">
+      <h3>LOGIN</h3>
+      <input type="text" id="campo-usuario" placeholder="USUÁRIO">
+      <input type="password" id="campo-senha" placeholder="SENHA">
+      <button id="botao-entrar">Entrar</button>
+      <div id="mensagem-login" class="mensagem-pequena"></div>
+    </div>
 
-        <section id="tela dashboard" class="tela ativa">
-            <header class="cabecalho">
-                <h1>Sitema de Segurança</h1>
-                <div class="status-global">
-                    <div class="card-status">
-                        <h4>Status</h4>
-                        <div id="estado-seguranca" class="estado estado-normal">NORMAL</div>
-                    </div>
+    <!-- MENU APÓS LOGIN -->
+    <div class="menu-pos-login oculto" id="menu-pos-login">
+      <div class="usuario-info">
+        <div class="usuario-nome" id="usuario-nome">Usuário</div>
+        <div id="usuario-cargo" class="usuario-cargo">Cargo</div>
+      </div>
 
-                    <div class="card-status">
-                        <h4>Uso de câmera</h4>
-                        <div class="circulo">
-                            <svg widht="140" height="140" viewBox="0 0 140 140">
-                                <circle cx="70" cy="70" r="62" class="fundo-circulo"></circle>
-                                <circle cx="70" cy="70" r="62" class="progresso-circulo" id="progresso-camera"></circle>
-                            </svg>
-                            <div class="valor-centro"><span id="porcentagem-camera">0</span>%</div>
-                        </div>
-                    </div>
-                </div>
-            </header>
-        </section>
-    </main>
+      <nav class="navegacao">
+        <button id="dashboard" class="nav-btn ativo">Dashboard</button>
+        <button id="recursos" class="nav-btn">Recursos</button>
+        <button id="incidentes" class="nav-btn">Incidentes</button>
+        <button id="relatorios" class="nav-btn">Relatórios</button>
+        <button id="botao-sair" class="nav-btn sair">Sair</button>
+      </nav>
+    </div>
 
-    
+    <footer class="rodape">
+      <small>Wayne Industries - Sistema de Controle</small>
+    </footer>
+  </aside>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="conteudo-principal">
+
+    <!-- DASHBOARD -->
+    <section id="tela-dashboard" class="tela ativa">
+      <header class="cabecalho">
+        <h1>Sistema de Segurança</h1>
+        <div class="status-global">
+          <div class="card-status">
+            <h4>Status</h4>
+            <div id="estado-seguranca" class="estado estado-normal">NORMAL</div>
+          </div>
+
+          <div class="card-status">
+            <h4>Uso de câmeras</h4>
+            <div class="circulo">
+              <svg width="140" height="140" viewBox="0 0 140 140">
+                <circle cx="70" cy="70" r="62" class="fundo-circulo"></circle>
+                <circle cx="70" cy="70" r="62" class="progresso-circulo" id="progresso-camera"></circle>
+              </svg>
+              <div class="valor-centro"><span id="porcentagem-camera">0</span>%</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="grid-dashboard">
+        <div class="card grande">
+          <h3>Visão Geral</h3>
+          <canvas id="grafico-atividade"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- GESTÃO DE RECURSOS -->
+    <section id="tela-recursos" class="tela oculto">
+      <header class="cabecalho">
+        <h1>Gestão de Recursos</h1>
+        <button id="botao-adicionar-recurso" class="botao-principal">Adicionar Recurso</button>
+      </header>
+
+      <div class="area-tabela">
+        <table class="tabela-recursos">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Nome / Modelo</th>
+              <th>Status</th>
+              <th>Localização</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="lista-recursos">
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- GESTÃO DE INCIDENTES -->
+    <section id="tela-incidentes" class="tela oculto">
+      <header class="cabecalho">
+        <h1>Gestão de Incidentes</h1>
+        <button id="botao-adicionar-incidente" class="botao-principal">Adicionar Incidente</button>
+      </header>
+
+      <div class="area-tabela">
+        <table class="tabela-incidentes">
+          <thead>
+            <tr>
+              <th>Título</th>
+              <th>Gravidade</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="lista-incidentes">
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- RELATÓRIOS -->
+    <section id="tela-relatorios" class="tela oculto">
+      <header class="cabecalho">
+        <h1>Relatórios</h1>
+      </header>
+      <div class="area-tabela">
+        <table class="tabela-relatorios">
+          <thead>
+            <tr>
+              <th>Recursos Cadastrados</th>
+              <th>Incidentes Cadastrados</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td id="relatorio-recursos">0</td>
+              <td id="relatorio-incidentes">0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- MODAL DE RECURSO -->
+    <div id="modal-recurso" class="modal oculto">
+      <div class="modal-conteudo">
+        <button class="modal-fechar" id="fechar-modal">&times;</button>
+        <h2>Novo Recurso</h2>
+
+        <label for="tipo-recurso">Tipo:</label>
+        <select id="tipo-recurso">
+          <option value="Equipamento">Equipamento</option>
+          <option value="Veículo">Veículo</option>
+          <option value="Dispositivo">Dispositivo</option>
+        </select>
+
+        <label for="nome-recurso">Nome / Modelo:</label>
+        <input type="text" id="nome-recurso">
+
+        <label for="status-recurso">Status:</label>
+        <input type="text" id="status-recurso">
+
+        <label for="localizacao-recurso">Localização:</label>
+        <input type="text" id="localizacao-recurso">
+
+        <div class="botoes-modal">
+          <button id="salvar-recurso" class="botao-principal">Salvar</button>
+          <button id="cancelar-recurso" class="botao-secundario">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL DE INCIDENTE -->
+    <div id="modal-incidente" class="modal oculto">
+      <div class="modal-conteudo">
+        <button class="modal-fechar" id="fechar-modal-incidente">&times;</button>
+        <h2>Novo Incidente</h2>
+
+        <label for="titulo-incidente">Título:</label>
+        <input type="text" id="titulo-incidente">
+
+        <label for="gravidade-incidente">Gravidade:</label>
+        <select id="gravidade-incidente">
+          <option value="Baixa">Baixa</option>
+          <option value="Média">Média</option>
+          <option value="Alta">Alta</option>
+          <option value="Crítica">Crítica</option>
+        </select>
+
+        <label for="status-incidente">Status:</label>
+        <select id="status-incidente">
+          <option value="Aberto">Aberto</option>
+          <option value="Em Andamento">Em Andamento</option>
+          <option value="Resolvido">Resolvido</option>
+        </select>
+
+        <div class="botoes-modal">
+          <button id="salvar-incidente" class="botao-principal">Salvar</button>
+          <button id="cancelar-incidente" class="botao-secundario">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="BackEnd/script.js"></script>
 </body>
 </html>

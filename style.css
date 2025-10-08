@@ -1,58 +1,64 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;600&display=swap');
 
-
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
- font-family: 'Inter', sans-serif;
 }
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #020b10;
+  background-color: #01070b;
   color: #e0e0e0;
   display: flex;
   overflow: hidden;
   height: 100vh;
 }
 
-/* layout Principal */
+/* ======= Layout Principal ======= */
 .painel {
   display: flex;
   width: 100%;
+  background: radial-gradient(circle at top left, #0a0f14 0%, #020b10 80%);
 }
 
-/* Menu Lateral */
+/* ======= Menu Lateral ======= */
 .menu-lateral {
   width: 270px;
-  background: linear-gradient(180deg, #0d151d, #0b0c10);
-  border-right: 1px solid #171f25;
+  background: linear-gradient(180deg, #0d151d 0%, #05080b 100%);
+  border-right: 1px solid #1a1f22;
   padding: 20px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  
+  box-shadow: 2px 0 15px rgba(0,0,0,0.7);
 }
 
 .area-logo img {
-  background-color: transparent;
+  filter: drop-shadow(0 0 8px #cbbd77cc);
 }
 
-/* Login */
-
+/* ======= Login ======= */
 .card-login {
-  background: #11141b;
+  background: #0a1015;
   padding: 20px;
   border-radius: 12px;
   margin-top: 30px;
-  box-shadow: 0 0 10px #002936;
+  box-shadow: 0 0 15px #00141f inset, 0 0 15px #000;
+  border: 1px solid #01394b;
+  transition: 0.3s;
+}
 
+.card-login:hover {
+  box-shadow: 0 0 25px #cbbd7799;
 }
 
 .card-login h3 {
   text-align: center;
   margin-bottom: 15px;
+  color: #cbbd77;
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 1px;
 }
 
 .card-login input {
@@ -70,18 +76,20 @@ body {
 
 .card-login button {
   width: 100%;
-  background: #0a1620;
-  border: none;
+  background: linear-gradient(90deg, #0a1620, #13222c);
+  border: 1px solid #01394b;
   border-radius: 8px;
   padding: 10px;
   font-weight: bold;
   color: #e0e0e0;
   cursor: pointer;
   transition: 0.3s;
+  text-transform: uppercase;
 }
 
 .card-login button:hover {
-  background-color: #002936;
+  background: #01394b;
+  box-shadow: 0 0 10px #01394b;
 }
 
 .mensagem-pequena {
@@ -91,24 +99,23 @@ body {
   font-size: 14px;
 }
 
-
-/* Menu Pós Login */
-.menu-pos-login {
-  margin-top: 30px;
-}
-
+/* ======= Menu Pós Login ======= */
 .usuario-info {
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .usuario-nome {
   font-weight: bold;
+  color: #cbbd77;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 8px #cbbd77;
 }
 
 .usuario-cargo {
-  font-size: 14px;
+  font-size: 13px;
   color: #a0a0a0;
+  font-style: italic;
 }
 
 .navegacao {
@@ -118,25 +125,298 @@ body {
 }
 
 .nav-btn {
-  background-color: #0a1620;
+  background: #0a1620;
   border: 1px solid #222;
-  font-weight: bold;
   border-radius: 8px;
   color: #8a8a8a;
   padding: 10px;
   cursor: pointer;
   transition: 0.3s;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 1px;
 }
 
 .nav-btn:hover,
 .nav-btn.ativo {
   background: #cbbd77;
-  box-shadow: 0 0 10px cbbd77;
-  color: #ffffff;
+  box-shadow: 0 0 12px #cbbd77;
+  color: #000;
 }
 
 .nav-btn.sair {
-  margin-top: 15px;
   background: #ff4444;
   color: #fff;
+  font-weight: bold;
+}
+
+/* ======= Conteúdo Principal ======= */
+.conteudo-principal {
+  flex: 1;
+  padding: 25px 30px;
+  overflow: auto;
+}
+
+.cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+h1 {
+  font-family: 'Orbitron', sans-serif;
+  color: #cbbd77;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px #cbbd7799;
+}
+
+/* ======= Dashboard ======= */
+.status-global {
+  display: flex;
+  gap: 20px;
+}
+
+.card-status {
+  background: #0a1620;
+  border-radius: 12px;
+  padding: 15px 25px;
+  text-align: center;
+  box-shadow: 0 0 15px #00141f;
+}
+
+.estado {
+  margin-top: 10px;
+  font-weight: bold;
+  padding: 5px 10px;
+  border-radius: 8px;
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.estado-normal {
+  background: #01394b;
+  box-shadow: 0 0 10px #01394b;
+}
+
+.estado-alerta {
+  background: #b36b00;
+  box-shadow: 0 0 10px #b36b00;
+}
+
+.estado-critico {
+  background: #a30000;
+  box-shadow: 0 0 15px #a30000;
+  animation: piscar 1s infinite;
+}
+
+@keyframes piscar {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ======= Círculo de Progresso ======= */
+.circulo {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 10px auto;
+}
+
+.fundo-circulo {
+  fill: none;
+  stroke: #01222d;
+  stroke-width: 12;
+}
+
+.progresso-circulo {
+  fill: none;
+  stroke: #cbbd77;
+  stroke-width: 12;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  stroke-dasharray: 389;
+  stroke-dashoffset: 389;
+  transition: stroke-dashoffset 0.4s linear;
+}
+
+.valor-centro {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 22px;
+  color: #cbbd77;
+  text-shadow: 0 0 6px #cbbd77;
+}
+
+/* ======= Tabelas ======= */
+.tabela-recursos,
+.tabela-incidentes {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #0a1620;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 10px #00141f;
+}
+
+.tabela-recursos th,
+.tabela-incidentes th {
+  text-align: left;
+  color: #cbbd77;
+  border-bottom: 2px solid #01394b;
+  padding: 12px;
+  background-color: #0d151d;
+}
+
+.tabela-recursos td,
+.tabela-incidentes td {
+  padding: 12px;
+  border-bottom: 1px solid #01394b;
+  color: #c0c0c0;
+}
+
+.tabela-recursos tr:hover,
+.tabela-incidentes tr:hover {
+  background: #13222c;
+  transition: 0.3s;
+}
+
+.btn-remover-recurso,
+.btn-remover-incidente {
+  background: #ff4444;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn-remover-recurso:hover,
+.btn-remover-incidente:hover {
+  background: #ff6666;
+  box-shadow: 0 0 8px #ff4444;
+}
+
+/* ======= Botões ======= */
+.botao-principal,
+.botao-secundario {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.3s;
+  letter-spacing: 1px;
+}
+
+.botao-principal {
+  background: #cbbd77;
+  color: #0a1620;
+  border: 1px solid #cbbd77;
+  box-shadow: 0 0 10px #cbbd77a8;
+  text-transform: uppercase;
+}
+
+.botao-principal:hover {
+  background: #e5dba2;
+  box-shadow: 0 0 15px #cbbd77;
+}
+
+.botao-secundario {
+  background: #0a1620;
+  color: #cbbd77;
+  border: 1px solid #cbbd77;
+  text-transform: uppercase;
+}
+
+.botao-secundario:hover {
+  background: #1b2c36;
+}
+
+/* ======= Modal ======= */
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.modal-conteudo {
+  background: linear-gradient(180deg, #0d151d, #0a1620);
+  border-radius: 12px;
+  padding: 25px;
+  width: 420px;
+  position: relative;
+  box-shadow: 0 0 25px #cbbd7766, 0 0 10px #01394b inset;
+  border: 1px solid #01394b;
+  animation: surgir 0.4s ease-out;
+}
+
+.modal-conteudo h2 {
+  text-align: center;
+  margin-bottom: 15px;
+  color: #cbbd77;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.modal-conteudo label {
+  color: #cbbd77;
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+
+.modal-conteudo input,
+.modal-conteudo select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #1b1e27;
+  color: #cbbd77;
+  border: 1px solid #01394b;
+  box-shadow: inset 0 0 5px #01394b;
+  margin-bottom: 10px;
+}
+
+.botoes-modal {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+/* ======= Animações ======= */
+@keyframes fadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+
+@keyframes surgir {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ======= Scrollbar ======= */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #0a1620;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #cbbd77;
+}
+
+/* ======= Oculto ======= */
+.oculto {
+  display: none !important;
 }
