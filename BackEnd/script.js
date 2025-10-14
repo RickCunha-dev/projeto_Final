@@ -1,3 +1,45 @@
+// ================= CONFIGURAÇÃO DA API ==================
+const API_URL = 'http://127.0.0.1:8001';
+let token = localStorage.getItem('token');
+
+// Atualiza função apiRequest para lidar melhor com erros
+async function apiRequest(endpoint, options = {}) {
+    try {
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
+        };
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            ...options,
+            headers
+        });
+
+        // Log para debug
+        console.log(`API Request: ${endpoint}`, response.status);
+
+        if (response.status === 401) {
+            token = null;
+            localStorage.removeItem('token');
+            window.location.reload();
+            return null;
+        }
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error(`Erro na requisição ${endpoint}:`, error);
+        return null;
+    }
+}
+
 // ================= LOGIN + PERMISSÕES ==================
 
 const botaoEntrar = document.getElementById("botao-entrar");
@@ -57,25 +99,50 @@ function hasPermission(perm) {
 }
 
 // Login
-botaoEntrar.addEventListener("click", () => {
-  const usuario = campoUsuario.value.trim();
-  const senha = campoSenha.value.trim();
+botaoEntrar.addEventListener("click", async (e) => {
+    e.preventDefault();
+    const usuario = campoUsuario.value.trim();
+    const senha = campoSenha.value.trim();
 
-  if (usuarios[usuario] && usuarios[usuario].senha === senha) {
-    mensagemLogin.textContent = "";
-    nomeUsuario.textContent = usuario.toUpperCase();
-    cargoUsuario.textContent = usuarios[usuario].cargo;
+    try {
+        const formData = new FormData();
+        formData.append('username', usuario);
+        formData.append('password', senha);
 
-    currentUser = { username: usuario, role: usuarios[usuario].role };
+        const response = await fetch(`${API_URL}/token`, {
+            method: 'POST',
+            body: formData
+        });
 
-    menuLogin.classList.add("oculto");
-    menuPosLogin.classList.remove("oculto");
-    document.getElementById("tela-dashboard").classList.remove("oculto");
+        const data = await response.json();
 
-    aplicarPermissoesNaUI();
-  } else {
-    mensagemLogin.textContent = "Usuário ou senha inválidos!";
-  }
+        if (response.ok) {
+            token = data.access_token;
+            localStorage.setItem('token', token);
+            
+            // Atualiza usuário atual
+            currentUser = {
+                username: usuario,
+                role: usuarios[usuario]?.role || 'funcionario'
+            };
+
+            menuLogin.classList.add("oculto");
+            menuPosLogin.classList.remove("oculto");
+            document.getElementById("tela-dashboard").classList.remove("oculto");
+
+            // Carrega dados iniciais
+            await Promise.all([
+                carregarRecursos(),
+                carregarIncidentes(),
+                atualizarDashboard()
+            ]);
+        } else {
+            mensagemLogin.textContent = "Usuário ou senha inválidos!";
+        }
+    } catch (error) {
+        console.error('Erro no login:', error);
+        mensagemLogin.textContent = "Erro ao conectar com o servidor!";
+    }
 });
 
 // Sair
@@ -134,24 +201,50 @@ botoesNavegacao.forEach((botao) => {
 
 // ================= DASHBOARD =================
 
+let graficoAtividade;
 const ctx = document.getElementById("grafico-atividade");
 if (ctx) {
-  new Chart(ctx, {
+  graficoAtividade = new Chart(ctx, {
     type: "line",
     data: {
-      labels: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
+      labels: ["Recursos", "Inc. Ativos", "Inc. Resolvidos", "Câmeras Ativas"],
       datasets: [
         {
-          label: "Atividades Registradas",
-          data: [3, 6, 4, 7, 5, 9, 4],
+          label: "Status Atual",
+          data: [0, 0, 0, 0],
           borderColor: "#cbbd77",
           backgroundColor: "rgba(203, 189, 119, 0.1)",
           tension: 0.3,
         },
       ],
     },
-    options: { scales: { y: { beginAtZero: true } } },
+    options: { 
+      scales: { 
+        y: { beginAtZero: true } 
+      },
+      animation: {
+        duration: 1000
+      }
+    },
   });
+}
+
+function atualizarGrafico() {
+  if (!graficoAtividade) return;
+  
+  const totalRecursos = recursos.length;
+  const incidentesAtivos = incidentes.filter(i => i.status !== "Resolvido").length;
+  const incidentesResolvidos = incidentes.filter(i => i.status === "Resolvido").length;
+  const camerasAtivas = recursos.filter(r => r.tipo === "Dispositivo" && r.status.toLowerCase() === "ativo").length;
+
+  graficoAtividade.data.datasets[0].data = [
+    totalRecursos,
+    incidentesAtivos,
+    incidentesResolvidos,
+    camerasAtivas
+  ];
+  
+  graficoAtividade.update();
 }
 
 // ================= CÍRCULO DE CÂMERAS E STATUS =================
@@ -160,14 +253,30 @@ const progresso = document.getElementById("progresso-camera");
 const porcentagem = document.getElementById("porcentagem-camera");
 const estadoSeguranca = document.getElementById("estado-seguranca");
 
-function atualizarUsoCameras() {
-  const cameras = recursos.filter(r => r.tipo === "Dispositivo" && r.nome.toLowerCase().includes("camera"));
-  const camerasAtivas = cameras.filter(c => c.status.toLowerCase() === "ativo" || c.status.toLowerCase() === "online");
-  const percentual = cameras.length > 0 ? Math.round((camerasAtivas.length / cameras.length) * 100) : 0;
-  
-  porcentagem.textContent = percentual;
-  const dashoffset = 389 - (389 * percentual) / 100;
-  progresso.style.strokeDashoffset = dashoffset;
+async function atualizarDashboard() {
+  const stats = await apiRequest('/dashboard/stats');
+  if (stats) {
+    // Atualiza status do sistema
+    estadoSeguranca.textContent = stats.status_sistema;
+    estadoSeguranca.className = `estado estado-${stats.status_sistema.toLowerCase()}`;
+    
+    // Atualiza uso de câmeras
+    const percentual = Math.round((stats.cameras_ativas / stats.total_cameras) * 100) || 0;
+    porcentagem.textContent = percentual;
+    const dashoffset = 389 - (389 * percentual) / 100;
+    progresso.style.strokeDashoffset = dashoffset;
+    
+    // Atualiza gráfico
+    if (graficoAtividade) {
+        graficoAtividade.data.datasets[0].data = [
+          stats.total_recursos,
+          stats.incidentes_abertos,
+          stats.incidentes_resolvidos,
+          stats.cameras_ativas
+        ];
+        graficoAtividade.update();
+      }
+  }
 }
 
 function atualizarStatusSeguranca() {
@@ -215,21 +324,32 @@ botaoAdicionar.addEventListener("click", () => {
 cancelar.addEventListener("click", fecharModalRecurso);
 fecharModal.addEventListener("click", fecharModalRecurso);
 
-salvar.addEventListener("click", () => {
-  if (!hasPermission("adicionar_recurso")) return alert("Você não tem permissão.");
-  if (!nomeRecurso.value) return alert("Digite um nome para o recurso!");
+salvar.addEventListener("click", async () => {
+    if (!hasPermission("adicionar_recurso")) return alert("Você não tem permissão.");
+    if (!nomeRecurso.value) return alert("Digite um nome para o recurso!");
 
-  recursos.push({
-    tipo: tipoRecurso.value,
-    nome: nomeRecurso.value,
-    status: statusRecurso.value,
-    localizacao: localizacaoRecurso.value,
-  });
+    const novoRecurso = {
+        tipo: tipoRecurso.value,
+        nome: nomeRecurso.value,
+        status: statusRecurso.value,
+        localizacao: localizacaoRecurso.value,
+    };
 
-  atualizarTabelaRecursos();
-  fecharModalRecurso();
-  atualizarRelatorios();
-  atualizarGrafico();
+    try {
+        const response = await apiRequest('/recursos/', {
+            method: 'POST',
+            body: JSON.stringify(novoRecurso)
+        });
+
+        if (response.ok) {
+            await carregarRecursos();
+            fecharModalRecurso();
+            atualizarDashboard();
+        }
+    } catch (error) {
+        console.error('Erro ao salvar recurso:', error);
+        alert('Erro ao salvar recurso');
+    }
 });
 
 function atualizarTabelaRecursos() {
@@ -294,21 +414,32 @@ botaoAdicionarIncidente.addEventListener("click", () => {
 cancelarIncidente.addEventListener("click", fecharModalIncidentes);
 fecharModalIncidente.addEventListener("click", fecharModalIncidentes);
 
-salvarIncidente.addEventListener("click", () => {
-  if (!hasPermission("adicionar_incidente")) return alert("Você não tem permissão.");
+salvarIncidente.addEventListener("click", async () => {
+    if (!hasPermission("adicionar_incidente")) return alert("Você não tem permissão.");
 
-  const titulo = document.getElementById("titulo-incidente").value;
-  const gravidade = document.getElementById("gravidade-incidente").value;
-  const status = document.getElementById("status-incidente").value;
+    const novoIncidente = {
+        titulo: document.getElementById("titulo-incidente").value,
+        gravidade: document.getElementById("gravidade-incidente").value,
+        status: document.getElementById("status-incidente").value
+    };
 
-  if (!titulo) return alert("Digite o título do incidente!");
+    if (!novoIncidente.titulo) return alert("Digite o título do incidente!");
 
-  incidentes.push({ titulo, gravidade, status });
-  atualizarTabelaIncidentes();
-  fecharModalIncidentes();
-  atualizarRelatorios();
-  atualizarStatusSeguranca();
-  atualizarGrafico();
+    try {
+        const response = await apiRequest('/incidentes/', {
+            method: 'POST',
+            body: JSON.stringify(novoIncidente)
+        });
+
+        if (response.ok) {
+            await carregarIncidentes();
+            fecharModalIncidentes();
+            atualizarDashboard();
+        }
+    } catch (error) {
+        console.error('Erro ao salvar incidente:', error);
+        alert('Erro ao salvar incidente');
+    }
 });
 
 function atualizarTabelaIncidentes() {
