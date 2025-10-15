@@ -3,15 +3,18 @@ from typing import Optional
 from datetime import datetime
 from models import TipoRecurso, StatusRecurso, GravidadeIncidente, StatusIncidente
 
+class Message(BaseModel):
+    message: str
+
 class UsuarioBase(BaseModel):
     username: str
     nome: str
     email: str
     cargo: Optional[str] = None
-    role: str
 
 class UsuarioCreate(UsuarioBase):
     senha: str
+    role: Optional[str] = "funcionario"
 
 class Usuario(UsuarioBase):
     id: int

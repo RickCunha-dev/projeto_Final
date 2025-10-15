@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import List
 from jose import jwt
+from jose.exceptions import JWTError
 from passlib.context import CryptContext
 from pathlib import Path
 import os
@@ -37,7 +38,6 @@ def init_db():
 # Inicializa o banco de dados
 init_db()
 
-# Criação da aplicação FastAPI com configurações de erro personalizadas
 app = FastAPI(
     title="Wayne Security API",
     description="API do Sistema de Segurança da Wayne Industries",
@@ -63,6 +63,35 @@ app.add_middleware(
 SECRET_KEY = os.getenv("SECRET_KEY", "wayne_industries_secret_key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Rota de cadastro de usuário
+@app.post("/cadastro", response_model=schemas.Message)
+async def cadastrar_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)):
+    try:
+        # Verifica se o usuário já existe
+        db_user = db.query(models.Usuario).filter(models.Usuario.username == usuario.username).first()
+        if db_user:
+            raise HTTPException(status_code=400, detail="Nome de usuário já existe")
+
+        # Cria o novo usuário
+        novo_usuario = models.Usuario(
+            username=usuario.username,
+            senha_hash=get_password_hash(usuario.senha),
+            nome=usuario.nome,
+            email=usuario.email,
+            cargo=usuario.cargo,
+            role="funcionario"  # Por padrão, novos usuários são funcionários
+        )
+        
+        db.add(novo_usuario)
+        db.commit()
+        db.refresh(novo_usuario)
+        
+        return {"message": "Usuário cadastrado com sucesso"}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro ao cadastrar usuário: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Rota de verificação de saúde
 @app.get("/health")
@@ -101,9 +130,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-    except jwt.JWTError:
+    except JWTError:
         raise credentials_exception
-    
+
     user = db.query(models.Usuario).filter(models.Usuario.username == username).first()
     if user is None:
         raise credentials_exception
@@ -113,12 +142,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 @app.post("/setup-admin", response_model=dict)
 async def setup_admin(db: Session = Depends(get_db)):
     try:
-        # Verifica se já existe algum usuário admin
         admin = db.query(models.Usuario).filter(models.Usuario.role == "admin").first()
         if admin:
             raise HTTPException(status_code=400, detail="Já existe um usuário admin")
-        
-        # Cria o usuário admin
+
         admin_user = models.Usuario(
             username="admin",
             senha_hash=get_password_hash("admin123"),
@@ -131,13 +158,11 @@ async def setup_admin(db: Session = Depends(get_db)):
         db.commit()
         db.refresh(admin_user)
         return {"message": "Usuário admin criado com sucesso"}
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-    db.add(admin_user)
-    db.commit()
-    db.refresh(admin_user)
-    return {"message": "Usuário admin criado com sucesso"}
 
 # Rotas de autenticação
 @app.post("/token", response_model=schemas.Token)
@@ -169,7 +194,7 @@ async def criar_recurso(
 ):
     if current_user.role not in ["gerente", "admin"]:
         raise HTTPException(status_code=403, detail="Sem permissão")
-    
+
     db_recurso = models.Recurso(**recurso.dict(), criado_por=current_user.id)
     db.add(db_recurso)
     db.commit()
@@ -184,11 +209,11 @@ async def remover_recurso(
 ):
     if current_user.role not in ["gerente", "admin"]:
         raise HTTPException(status_code=403, detail="Sem permissão")
-    
+
     recurso = db.query(models.Recurso).filter(models.Recurso.id == recurso_id).first()
     if not recurso:
         raise HTTPException(status_code=404, detail="Recurso não encontrado")
-    
+
     db.delete(recurso)
     db.commit()
     return {"message": "Recurso removido com sucesso"}
@@ -222,11 +247,11 @@ async def remover_incidente(
 ):
     if current_user.role not in ["gerente", "admin"]:
         raise HTTPException(status_code=403, detail="Sem permissão")
-    
+
     incidente = db.query(models.Incidente).filter(models.Incidente.id == incidente_id).first()
     if not incidente:
         raise HTTPException(status_code=404, detail="Incidente não encontrado")
-    
+
     db.delete(incidente)
     db.commit()
     return {"message": "Incidente removido com sucesso"}
@@ -238,36 +263,35 @@ async def get_dashboard_stats(
     current_user: models.Usuario = Depends(get_current_user)
 ):
     total_recursos = db.query(models.Recurso).count()
-    recursos_ativos = db.query(models.Recurso).filter(models.Recurso.status == "Ativo").count()
-    
+    recursos_ativos = db.query(models.Recurso).filter(models.Recurso.status == models.StatusRecurso.ATIVO).count()
+
     total_incidentes = db.query(models.Incidente).count()
     incidentes_abertos = db.query(models.Incidente).filter(
-        models.Incidente.status.in_(["Aberto", "Em Andamento"])
+        models.Incidente.status.in_([models.StatusIncidente.ABERTO, models.StatusIncidente.EM_ANDAMENTO])
     ).count()
-    
+
     cameras_ativas = db.query(models.Recurso).filter(
-        models.Recurso.tipo == "Dispositivo",
-        models.Recurso.status == "Ativo"
+        models.Recurso.tipo == models.TipoRecurso.DISPOSITIVO,
+        models.Recurso.status == models.StatusRecurso.ATIVO
     ).count()
-    
-    # Determinando o status do sistema
+
     incidentes_criticos = db.query(models.Incidente).filter(
-        models.Incidente.gravidade == "Crítica",
-        models.Incidente.status != "Resolvido"
+        models.Incidente.gravidade == models.GravidadeIncidente.CRITICA,
+        models.Incidente.status != models.StatusIncidente.RESOLVIDO
     ).count()
-    
+
     incidentes_altos = db.query(models.Incidente).filter(
-        models.Incidente.gravidade == "Alta",
-        models.Incidente.status != "Resolvido"
+        models.Incidente.gravidade == models.GravidadeIncidente.ALTA,
+        models.Incidente.status != models.StatusIncidente.RESOLVIDO
     ).count()
-    
+
     if incidentes_criticos > 0:
         status_sistema = "CRÍTICO"
     elif incidentes_altos > 0:
         status_sistema = "ALERTA"
     else:
         status_sistema = "NORMAL"
-    
+
     return schemas.DashboardStats(
         total_recursos=total_recursos,
         recursos_ativos=recursos_ativos,

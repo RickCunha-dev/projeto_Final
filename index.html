@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sistema de Segurança - Wayne Industries</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -22,7 +22,28 @@
       <input type="text" id="campo-usuario" placeholder="USUÁRIO">
       <input type="password" id="campo-senha" placeholder="SENHA">
       <button id="botao-entrar">Entrar</button>
+      <button id="botao-cadastro" class="botao-secundario">Cadastre-se</button>
       <div id="mensagem-login" class="mensagem-pequena"></div>
+    </div>
+
+    <!-- Modal de Cadastro -->
+    <div id="modal-cadastro" class="modal oculto">
+      <div class="modal-conteudo">
+        <h3>Cadastro de Usuário</h3>
+        <form id="form-cadastro">
+          <input type="text" id="cadastro-usuario" placeholder="Nome de Usuário" required>
+          <input type="text" id="cadastro-nome" placeholder="Nome Completo" required>
+          <input type="email" id="cadastro-email" placeholder="E-mail" required>
+          <input type="text" id="cadastro-cargo" placeholder="Cargo">
+          <input type="password" id="cadastro-senha" placeholder="Senha" required>
+          <input type="password" id="cadastro-confirma-senha" placeholder="Confirme a Senha" required>
+          <div class="botoes-modal">
+            <button type="button" id="fechar-cadastro" class="botao-secundario">Cancelar</button>
+            <button type="submit" class="botao-primario">Cadastrar</button>
+          </div>
+        </form>
+        <div id="mensagem-cadastro" class="mensagem-pequena"></div>
+      </div>
     </div>
 
     <!-- MENU APÓS LOGIN -->

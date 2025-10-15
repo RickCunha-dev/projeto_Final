@@ -2,11 +2,11 @@
 const API_URL = 'http://127.0.0.1:8001';
 let token = localStorage.getItem('token');
 
-// Atualiza função apiRequest para lidar melhor com erros
+// apiRequest agora retorna um objeto { ok, status, data }
+// data será o JSON parseado (ou null)
 async function apiRequest(endpoint, options = {}) {
     try {
         const headers = {
-            'Content-Type': 'application/json',
             ...options.headers
         };
 
@@ -14,37 +14,114 @@ async function apiRequest(endpoint, options = {}) {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
-        const response = await fetch(`${API_URL}${endpoint}`, {
+        const resp = await fetch(`${API_URL}${endpoint}`, {
             ...options,
             headers
         });
 
-        // Log para debug
-        console.log(`API Request: ${endpoint}`, response.status);
+        console.log(`API Request: ${endpoint}`, resp.status);
 
-        if (response.status === 401) {
+        if (resp.status === 401) {
             token = null;
             localStorage.removeItem('token');
-            window.location.reload();
-            return null;
+            // notifica UI de logout
+            return { ok: false, status: 401, data: null };
         }
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        let data = null;
+        const ct = resp.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+            data = await resp.json();
+        } else {
+            try { data = await resp.text(); } catch(e) { data = null; }
         }
 
-        return await response.json();
+        return { ok: resp.ok, status: resp.status, data };
     } catch (error) {
         console.error(`Erro na requisição ${endpoint}:`, error);
-        return null;
+        return { ok: false, status: 0, data: null };
     }
 }
 
 // ================= LOGIN + PERMISSÕES ==================
 
+// Elementos do login
 const botaoEntrar = document.getElementById("botao-entrar");
 const campoUsuario = document.getElementById("campo-usuario");
 const campoSenha = document.getElementById("campo-senha");
+
+// Elementos do cadastro
+const modalCadastro = document.getElementById('modal-cadastro');
+const formCadastro = document.getElementById('form-cadastro');
+const botaoCadastro = document.getElementById('botao-cadastro');
+const fecharCadastro = document.getElementById('fechar-cadastro');
+const mensagemCadastro = document.getElementById('mensagem-cadastro');
+
+// Funções de Cadastro
+async function cadastrarUsuario(dados) {
+    const response = await apiRequest('/cadastro', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(dados)
+    });
+    
+    return response;
+}
+
+// Event Listeners do Cadastro
+botaoCadastro?.addEventListener('click', () => {
+    modalCadastro.classList.remove('oculto');
+});
+
+fecharCadastro?.addEventListener('click', () => {
+    modalCadastro.classList.add('oculto');
+    formCadastro.reset();
+    mensagemCadastro.textContent = '';
+});
+
+formCadastro?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const senha = document.getElementById('cadastro-senha').value;
+    const confirmaSenha = document.getElementById('cadastro-confirma-senha').value;
+    
+    if (senha !== confirmaSenha) {
+        mensagemCadastro.textContent = 'As senhas não coincidem!';
+        mensagemCadastro.style.color = '#f44336';
+        return;
+    }
+    
+    const dados = {
+        username: document.getElementById('cadastro-usuario').value,
+        nome: document.getElementById('cadastro-nome').value,
+        email: document.getElementById('cadastro-email').value,
+        cargo: document.getElementById('cadastro-cargo').value,
+        senha: senha
+    };
+    
+    try {
+        const result = await cadastrarUsuario(dados);
+        
+        if (result.ok) {
+            mensagemCadastro.textContent = 'Cadastro realizado com sucesso!';
+            mensagemCadastro.style.color = '#4CAF50';
+            setTimeout(() => {
+                modalCadastro.classList.add('oculto');
+                formCadastro.reset();
+                mensagemCadastro.textContent = '';
+            }, 2000);
+        } else {
+            mensagemCadastro.textContent = result.data?.detail || 'Erro ao cadastrar usuário';
+            mensagemCadastro.style.color = '#f44336';
+        }
+    } catch (error) {
+        console.error('Erro ao cadastrar:', error);
+        mensagemCadastro.textContent = 'Erro ao conectar com o servidor';
+        mensagemCadastro.style.color = '#f44336';
+    }
+});
 const mensagemLogin = document.getElementById("mensagem-login");
 
 const menuLogin = document.getElementById("id-login");
@@ -53,7 +130,7 @@ const menuPosLogin = document.getElementById("menu-pos-login");
 const nomeUsuario = document.getElementById("usuario-nome");
 const cargoUsuario = document.getElementById("usuario-cargo");
 
-// Usuários e papéis
+// Usuários e papéis (somente para demo/local)
 const usuarios = {
   funcionario: { senha: "1234", cargo: "Funcionário", role: "funcionario" },
   gerente: { senha: "4321", cargo: "Gerente", role: "gerente" },
@@ -98,29 +175,36 @@ function hasPermission(perm) {
   return permissions[role] && permissions[role][perm];
 }
 
-// Login
+// Login (usa application/x-www-form-urlencoded para OAuth2)
 botaoEntrar.addEventListener("click", async (e) => {
     e.preventDefault();
     const usuario = campoUsuario.value.trim();
     const senha = campoSenha.value.trim();
 
-    try {
-        const formData = new FormData();
-        formData.append('username', usuario);
-        formData.append('password', senha);
+    if (!usuario || !senha) {
+      mensagemLogin.textContent = "Digite usuário e senha.";
+      return;
+    }
 
-        const response = await fetch(`${API_URL}/token`, {
+    try {
+        const body = new URLSearchParams();
+        body.append('username', usuario);
+        body.append('password', senha);
+
+        const resp = await fetch(`${API_URL}/token`, {
             method: 'POST',
-            body: formData
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: body.toString()
         });
 
-        const data = await response.json();
+        const data = await (resp.headers.get('content-type') || '').includes('application/json') ? await resp.json() : null;
 
-        if (response.ok) {
+        if (resp.ok && data && data.access_token) {
             token = data.access_token;
             localStorage.setItem('token', token);
-            
-            // Atualiza usuário atual
+
             currentUser = {
                 username: usuario,
                 role: usuarios[usuario]?.role || 'funcionario'
@@ -129,6 +213,9 @@ botaoEntrar.addEventListener("click", async (e) => {
             menuLogin.classList.add("oculto");
             menuPosLogin.classList.remove("oculto");
             document.getElementById("tela-dashboard").classList.remove("oculto");
+
+            nomeUsuario.textContent = currentUser.username;
+            cargoUsuario.textContent = usuarios[usuario]?.cargo || '';
 
             // Carrega dados iniciais
             await Promise.all([
@@ -153,6 +240,8 @@ botaoSair.addEventListener("click", () => {
   campoUsuario.value = "";
   campoSenha.value = "";
   currentUser = null;
+  token = null;
+  localStorage.removeItem('token');
   aplicarPermissoesNaUI();
 });
 
@@ -218,9 +307,9 @@ if (ctx) {
         },
       ],
     },
-    options: { 
-      scales: { 
-        y: { beginAtZero: true } 
+    options: {
+      scales: {
+        y: { beginAtZero: true }
       },
       animation: {
         duration: 1000
@@ -231,7 +320,7 @@ if (ctx) {
 
 function atualizarGrafico() {
   if (!graficoAtividade) return;
-  
+
   const totalRecursos = recursos.length;
   const incidentesAtivos = incidentes.filter(i => i.status !== "Resolvido").length;
   const incidentesResolvidos = incidentes.filter(i => i.status === "Resolvido").length;
@@ -243,7 +332,7 @@ function atualizarGrafico() {
     incidentesResolvidos,
     camerasAtivas
   ];
-  
+
   graficoAtividade.update();
 }
 
@@ -253,36 +342,52 @@ const progresso = document.getElementById("progresso-camera");
 const porcentagem = document.getElementById("porcentagem-camera");
 const estadoSeguranca = document.getElementById("estado-seguranca");
 
+function atualizarUsoCameras() {
+  // strokeDasharray correspondente ao perímetro do círculo (r = 62 -> ~389)
+  if (!progresso) return;
+  const total = recursos.filter(r => r.tipo === "Dispositivo").length || 0;
+  const ativas = recursos.filter(r => r.tipo === "Dispositivo" && r.status.toLowerCase() === "ativo").length || 0;
+  const percentual = total === 0 ? 0 : Math.round((ativas / total) * 100);
+  porcentagem.textContent = percentual;
+  const dasharray = 389;
+  const dashoffset = Math.round(dasharray - (dasharray * percentual) / 100);
+  progresso.style.strokeDasharray = `${dasharray}`;
+  progresso.style.strokeDashoffset = `${dashoffset}`;
+}
+
+// atualizarDashboard faz chamada ao backend para estatísticas
 async function atualizarDashboard() {
-  const stats = await apiRequest('/dashboard/stats');
-  if (stats) {
-    // Atualiza status do sistema
+  const resp = await apiRequest('/dashboard/stats', { method: 'GET' });
+  if (resp && resp.ok && resp.data) {
+    const stats = resp.data;
     estadoSeguranca.textContent = stats.status_sistema;
     estadoSeguranca.className = `estado estado-${stats.status_sistema.toLowerCase()}`;
-    
-    // Atualiza uso de câmeras
-    const percentual = Math.round((stats.cameras_ativas / stats.total_cameras) * 100) || 0;
+
+    const percentual = Math.round((stats.cameras_ativas / (stats.total_recursos || 1)) * 100) || 0;
     porcentagem.textContent = percentual;
-    const dashoffset = 389 - (389 * percentual) / 100;
-    progresso.style.strokeDashoffset = dashoffset;
-    
-    // Atualiza gráfico
+    const dasharray = 389;
+    const dashoffset = Math.round(dasharray - (dasharray * percentual) / 100);
+    progresso.style.strokeDasharray = `${dasharray}`;
+    progresso.style.strokeDashoffset = `${dashoffset}`;
+
     if (graficoAtividade) {
-        graficoAtividade.data.datasets[0].data = [
-          stats.total_recursos,
-          stats.incidentes_abertos,
-          stats.incidentes_resolvidos,
-          stats.cameras_ativas
-        ];
-        graficoAtividade.update();
-      }
+      graficoAtividade.data.datasets[0].data = [
+        stats.total_recursos,
+        stats.incidentes_abertos,
+        stats.incidentes_resolvidos,
+        stats.cameras_ativas
+      ];
+      graficoAtividade.update();
+    }
+  } else {
+    console.warn('Não foi possível atualizar dashboard (resposta nula).');
   }
 }
 
 function atualizarStatusSeguranca() {
   const incidentesCriticos = incidentes.filter(i => i.gravidade === "Crítica" && i.status !== "Resolvido");
   const incidentesAlta = incidentes.filter(i => i.gravidade === "Alta" && i.status !== "Resolvido");
-  
+
   if (incidentesCriticos.length > 0) {
     estadoSeguranca.textContent = "CRÍTICO";
     estadoSeguranca.className = "estado estado-critico";
@@ -338,13 +443,16 @@ salvar.addEventListener("click", async () => {
     try {
         const response = await apiRequest('/recursos/', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(novoRecurso)
         });
 
-        if (response.ok) {
+        if (response && response.ok && response.data) {
             await carregarRecursos();
             fecharModalRecurso();
             atualizarDashboard();
+        } else {
+            alert('Erro ao salvar recurso (ver console).');
         }
     } catch (error) {
         console.error('Erro ao salvar recurso:', error);
@@ -354,27 +462,40 @@ salvar.addEventListener("click", async () => {
 
 function atualizarTabelaRecursos() {
   listaRecursos.innerHTML = "";
-  recursos.forEach((r, index) => {
+  recursos.forEach((r) => {
     const linha = document.createElement("tr");
     linha.innerHTML = `
       <td>${r.tipo}</td>
       <td>${r.nome}</td>
       <td>${r.status}</td>
-      <td>${r.localizacao}</td>
-      <td><button class="btn-remover-recurso" onclick="removerRecurso(${index})">Remover</button></td>
+      <td>${r.localizacao || ''}</td>
+      <td>
+        <button class="btn-remover-recurso" data-id="${r.id}">Remover</button>
+      </td>
     `;
     listaRecursos.appendChild(linha);
   });
-  aplicarPermissoesNaUI();
-  atualizarUsoCameras();
-}
 
-function removerRecurso(index) {
-  if (!hasPermission("remover_recurso")) return alert("Você não tem permissão.");
-  recursos.splice(index, 1);
-  atualizarTabelaRecursos();
-  atualizarRelatorios();
-  atualizarGrafico();
+  // delegação para remover recurso via API
+  document.querySelectorAll(".btn-remover-recurso").forEach(btn => {
+    btn.style.display = hasPermission("remover_recurso") ? "" : "none";
+    btn.addEventListener("click", async (ev) => {
+      const id = ev.currentTarget.getAttribute("data-id");
+      if (!id) return;
+      if (!confirm("Remover recurso?")) return;
+      const resp = await apiRequest(`/recursos/${id}`, { method: 'DELETE' });
+      if (resp && resp.ok) {
+        await carregarRecursos();
+        atualizarRelatorios();
+        atualizarGrafico();
+        atualizarUsoCameras();
+      } else {
+        alert('Erro ao remover recurso.');
+      }
+    });
+  });
+
+  aplicarPermissoesNaUI();
   atualizarUsoCameras();
 }
 
@@ -428,13 +549,16 @@ salvarIncidente.addEventListener("click", async () => {
     try {
         const response = await apiRequest('/incidentes/', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(novoIncidente)
         });
 
-        if (response.ok) {
+        if (response && response.ok && response.data) {
             await carregarIncidentes();
             fecharModalIncidentes();
             atualizarDashboard();
+        } else {
+            alert('Erro ao salvar incidente (ver console).');
         }
     } catch (error) {
         console.error('Erro ao salvar incidente:', error);
@@ -444,27 +568,37 @@ salvarIncidente.addEventListener("click", async () => {
 
 function atualizarTabelaIncidentes() {
   listaTabelaIncidentes.innerHTML = "";
-  incidentes.forEach((i, index) => {
+  incidentes.forEach((i) => {
     const linha = document.createElement("tr");
     linha.innerHTML = `
       <td>${i.titulo}</td>
       <td>${i.gravidade}</td>
       <td>${i.status}</td>
-      <td><button class="btn-remover-incidente" onclick="removerIncidente(${index})">Remover</button></td>
+      <td><button class="btn-remover-incidente" data-id="${i.id}">Remover</button></td>
     `;
     listaTabelaIncidentes.appendChild(linha);
   });
+
+  document.querySelectorAll(".btn-remover-incidente").forEach(btn => {
+    btn.style.display = hasPermission("remover_incidente") ? "" : "none";
+    btn.addEventListener("click", async (ev) => {
+      const id = ev.currentTarget.getAttribute("data-id");
+      if (!id) return;
+      if (!confirm("Remover incidente?")) return;
+      const resp = await apiRequest(`/incidentes/${id}`, { method: 'DELETE' });
+      if (resp && resp.ok) {
+        await carregarIncidentes();
+        atualizarRelatorios();
+        atualizarStatusSeguranca();
+        atualizarGrafico();
+      } else {
+        alert('Erro ao remover incidente.');
+      }
+    });
+  });
+
   aplicarPermissoesNaUI();
   atualizarStatusSeguranca();
-}
-
-function removerIncidente(index) {
-  if (!hasPermission("remover_incidente")) return alert("Você não tem permissão.");
-  incidentes.splice(index, 1);
-  atualizarTabelaIncidentes();
-  atualizarRelatorios();
-  atualizarStatusSeguranca();
-  atualizarGrafico();
 }
 
 // ================= RELATÓRIOS =================
@@ -477,7 +611,49 @@ function atualizarRelatorios() {
   if (incCount) incCount.textContent = incidentes.length;
 }
 
+// ================= FUNÇÕES DE CARREGAMENTO =================
+
+async function carregarRecursos() {
+  const resp = await apiRequest('/recursos/', { method: 'GET' });
+  if (resp && resp.ok && Array.isArray(resp.data)) {
+    recursos = resp.data.map(r => ({ id: r.id, tipo: r.tipo, nome: r.nome, status: r.status, localizacao: r.localizacao }));
+    atualizarTabelaRecursos();
+    atualizarRelatorios();
+    atualizarGrafico();
+    atualizarUsoCameras();
+  } else {
+    recursos = [];
+    atualizarTabelaRecursos();
+    atualizarRelatorios();
+  }
+}
+
+async function carregarIncidentes() {
+  const resp = await apiRequest('/incidentes/', { method: 'GET' });
+  if (resp && resp.ok && Array.isArray(resp.data)) {
+    incidentes = resp.data.map(i => ({ id: i.id, titulo: i.titulo, gravidade: i.gravidade, status: i.status }));
+    atualizarTabelaIncidentes();
+    atualizarRelatorios();
+    atualizarStatusSeguranca();
+    atualizarGrafico();
+  } else {
+    incidentes = [];
+    atualizarTabelaIncidentes();
+    atualizarRelatorios();
+  }
+}
+
 // ================= INICIALIZAÇÃO =================
 
 atualizarUsoCameras();
 atualizarStatusSeguranca();
+aplicarPermissoesNaUI();
+
+// Se já houver token salvo, tenta carregar dados (não tenta relogar automaticamente)
+if (token) {
+  (async () => {
+    await carregarRecursos();
+    await carregarIncidentes();
+    await atualizarDashboard();
+  })();
+}
